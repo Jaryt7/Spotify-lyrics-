@@ -6,19 +6,18 @@
 <title>En vivo — Letra sincronizada</title>
 <style>
   :root{
-    --bg:#0d0f0d;
-    --panel:#151715;
     --ink:#f3f4ef;
-    --muted:#8b9188;
+    --muted:rgba(243,244,239,0.6);
     --accent:#1db954;
-    --line-dim:#565b55;
+    --line-dim:rgba(255,255,255,0.4);
     --font-display:'Fraunces', Georgia, serif;
     --font-body:'Inter', -apple-system, sans-serif;
   }
   *{box-sizing:border-box;}
   html,body{height:100%;margin:0;}
   body{
-    background:radial-gradient(circle at 20% -10%, #1a2419 0%, var(--bg) 55%);
+    position:relative;
+    background:#0b0b0d;
     color:var(--ink);
     font-family:var(--font-body);
     display:flex;
@@ -26,22 +25,40 @@
     justify-content:center;
     min-height:100vh;
     padding:24px;
+    overflow-x:hidden;
   }
-  @font-face{
-    font-family:'Fraunces';
-    src:local('Georgia');
+  @font-face{ font-family:'Fraunces'; src:local('Georgia'); }
+
+  /* ambient blurred backdrop, drawn from the current track's artwork */
+  .bg-blur{
+    position:fixed; inset:-10%;
+    background-position:center; background-size:cover;
+    filter:blur(90px) saturate(1.6);
+    opacity:0.8;
+    transition:background-image .6s ease;
+    z-index:-1;
   }
-  .stage{
-    width:100%;
-    max-width:720px;
+  .bg-tint{
+    position:fixed; inset:0;
+    background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.55));
+    z-index:-1;
   }
+
+  .stage{ width:100%; max-width:920px; }
+
+  .glass{
+    backdrop-filter:blur(32px) saturate(180%);
+    -webkit-backdrop-filter:blur(32px) saturate(180%);
+    background:rgba(255,255,255,0.10);
+    border:1px solid rgba(255,255,255,0.22);
+    box-shadow:0 20px 50px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25);
+  }
+
   /* ---------- login screen ---------- */
   .login{
     text-align:center;
     padding:64px 32px;
-    background:var(--panel);
-    border-radius:18px;
-    border:1px solid #23261f;
+    border-radius:24px;
   }
   .login h1{
     font-family:var(--font-display);
@@ -70,104 +87,108 @@
   }
   button:hover{background:#21e362; transform:translateY(-1px);}
   button:focus-visible{outline:2px solid var(--ink); outline-offset:3px;}
-  .error{
-    color:#ff8a7a;
-    margin-top:18px;
-    font-size:0.9rem;
-  }
+  .error{ color:#ff8a7a; margin-top:18px; font-size:0.9rem; }
 
-  /* ---------- player screen ---------- */
+  /* ---------- player screen: one unified glass panel ---------- */
   .player{display:none;}
   .player.active{display:block;}
-  .track-row{
+
+  .player-glass{
     display:flex;
-    gap:22px;
-    align-items:center;
-    background:var(--panel);
-    border:1px solid #23261f;
-    border-radius:18px;
-    padding:20px;
-    margin-bottom:28px;
+    flex-wrap:wrap;
+    gap:40px;
+    border-radius:28px;
+    padding:36px;
+    margin-bottom:18px;
+  }
+
+  .now-playing{
+    flex:1 1 280px;
+    min-width:240px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
   }
   .art{
-    width:92px;height:92px;border-radius:10px;
-    object-fit:cover;flex-shrink:0;background:#222;
+    width:100%;
+    max-width:280px;
+    aspect-ratio:1/1;
+    border-radius:16px;
+    object-fit:cover;
+    background:rgba(255,255,255,0.08);
+    box-shadow:0 20px 40px rgba(0,0,0,0.35);
   }
-  .meta{min-width:0;flex:1;}
   .title{
     font-family:var(--font-display);
-    font-size:1.4rem;
+    font-size:1.5rem;
     font-weight:500;
     margin:0 0 4px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .artist{
     color:var(--muted);
-    margin:0 0 12px;
+    margin:0;
     font-size:0.95rem;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .bar-track{
-    height:3px;background:#2b2f29;border-radius:2px;overflow:hidden;
-  }
-  .bar-fill{
-    height:100%;background:var(--accent);width:0%;
-    transition:width .25s linear;
-  }
-  .times{
-    display:flex;justify-content:space-between;
-    font-size:0.75rem;color:var(--muted);margin-top:6px;
-  }
-  .status-dot{
-    width:8px;height:8px;border-radius:50%;background:var(--line-dim);
-    display:inline-block;margin-right:6px;
-  }
-  .status-dot.playing{background:var(--accent);box-shadow:0 0 0 3px rgba(29,185,84,.2);}
+  .bar-track{ height:3px;background:rgba(255,255,255,0.18);border-radius:2px;overflow:hidden; }
+  .bar-fill{ height:100%;background:#FFFFFF;width:0%;transition:width .25s linear; }
+  .times{ display:flex;justify-content:space-between;font-size:0.75rem;color:var(--muted);margin-top:6px; }
+  .status-dot{ width:8px;height:8px;border-radius:50%;background:var(--line-dim);display:inline-block;margin-right:6px; }
+  .status-dot.playing{ background:var(--accent);box-shadow:0 0 0 3px rgba(29,185,84,.25); }
 
-  .lyrics-panel{
-    background:var(--panel);
-    border:1px solid #23261f;
-    border-radius:18px;
-    padding:36px 32px;
+  .lyrics-col{
+    flex:2 1 320px;
+    min-width:260px;
     height:420px;
     overflow:hidden;
     position:relative;
-    mask-image:linear-gradient(to bottom, transparent, black 14%, black 86%, transparent);
+    mask-image:linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);
+    display:flex;
+    align-items:center;
   }
   .lyrics-inner{
+    width:100%;
     transition:transform .35s cubic-bezier(.22,.9,.3,1);
     will-change:transform;
   }
   .lyric-line{
     font-family:var(--font-display);
-    font-size:1.3rem;
-    line-height:1.9;
-    color:var(--line-dim);
-    transition:color .3s ease, transform .3s ease;
+    font-size:1.5rem;
+    line-height:1.85;
+    color:rgba(255,255,255,0.4);
+    transition:color .3s ease, transform .3s ease, font-size .3s ease;
     padding:4px 0;
   }
   .lyric-line.current{
-    color:var(--ink);
+    color:#FFFFFF;
     font-weight:500;
+    font-size:1.7rem;
   }
   .lyrics-empty{
     color:var(--muted);
     font-family:var(--font-body);
     font-size:0.95rem;
     text-align:center;
-    padding-top:160px;
+    width:100%;
   }
-  .footer-note{
-    text-align:center;color:var(--line-dim);font-size:0.78rem;margin-top:16px;
+  .footer-note{ text-align:center;color:rgba(255,255,255,0.35);font-size:0.78rem; }
+  .footer-note a{ color:rgba(255,255,255,0.45); }
+
+  @media (max-width:640px){
+    .player-glass{ padding:24px; gap:28px; }
+    .lyrics-col{ height:320px; }
   }
-  .footer-note a{color:var(--line-dim);}
 </style>
 </head>
 <body>
 
+<div class="bg-blur" id="bgBlur"></div>
+<div class="bg-tint"></div>
+
 <div class="stage">
 
-  <div class="login" id="loginScreen">
+  <div class="login glass" id="loginScreen">
     <h1>Lo que suena, en letra</h1>
     <p>Conecta tu cuenta de Spotify para ver en vivo la canción que estás escuchando, con la letra sincronizada línea a línea.</p>
     <button id="loginBtn">Conectar con Spotify</button>
@@ -175,19 +196,23 @@
   </div>
 
   <div class="player" id="playerScreen">
-    <div class="track-row">
-      <img class="art" id="art" src="" alt="">
-      <div class="meta">
-        <p class="title" id="trackTitle">—</p>
-        <p class="artist"><span class="status-dot" id="statusDot"></span><span id="trackArtist">Esperando reproducción…</span></p>
-        <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
-        <div class="times"><span id="tCurrent">0:00</span><span id="tTotal">0:00</span></div>
+    <div class="player-glass glass">
+      <div class="now-playing">
+        <img class="art" id="art" src="" alt="">
+        <div class="meta">
+          <p class="title" id="trackTitle">—</p>
+          <p class="artist"><span class="status-dot" id="statusDot"></span><span id="trackArtist">Esperando reproducción…</span></p>
+        </div>
+        <div>
+          <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+          <div class="times"><span id="tCurrent">0:00</span><span id="tTotal">0:00</span></div>
+        </div>
       </div>
-    </div>
 
-    <div class="lyrics-panel">
-      <div class="lyrics-inner" id="lyricsInner">
-        <div class="lyrics-empty" id="lyricsEmpty">Reproduce algo en Spotify para ver la letra aquí.</div>
+      <div class="lyrics-col">
+        <div class="lyrics-inner" id="lyricsInner">
+          <div class="lyrics-empty" id="lyricsEmpty">Reproduce algo en Spotify para ver la letra aquí.</div>
+        </div>
       </div>
     </div>
 
@@ -365,7 +390,7 @@ function highlightForTime(ms){
   nodes.forEach(n=>n.classList.remove('current'));
   if(idx >= 0 && nodes[idx]){
     nodes[idx].classList.add('current');
-    const panelHeight = 420;
+    const panelHeight = document.querySelector('.lyrics-col').clientHeight;
     const offset = nodes[idx].offsetTop - panelHeight/2 + nodes[idx].offsetHeight/2;
     lyricsInner.style.transform = `translateY(${-offset}px)`;
   }
@@ -373,6 +398,7 @@ function highlightForTime(ms){
 
 /* ---------------- player polling ---------------- */
 const artEl = document.getElementById('art');
+const bgBlur = document.getElementById('bgBlur');
 const titleEl = document.getElementById('trackTitle');
 const artistEl = document.getElementById('trackArtist');
 const barFill = document.getElementById('barFill');
@@ -381,6 +407,7 @@ const tTotal = document.getElementById('tTotal');
 const statusDot = document.getElementById('statusDot');
 
 let lastProgressMs = 0, lastDurationMs = 0, lastIsPlaying = false, lastFetchedAt = 0;
+let lastArtwork = '';
 
 function fmt(ms){
   if(!ms || ms < 0) ms = 0;
@@ -416,7 +443,11 @@ async function pollNowPlaying(){
 
     titleEl.textContent = track;
     artistEl.textContent = artist;
-    if(artwork) artEl.src = artwork;
+    if(artwork && artwork !== lastArtwork){
+      artEl.src = artwork;
+      bgBlur.style.backgroundImage = `url("${artwork}")`;
+      lastArtwork = artwork;
+    }
     tTotal.textContent = fmt(durationMs);
     statusDot.classList.toggle('playing', isPlaying);
 
